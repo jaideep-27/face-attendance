@@ -1,31 +1,41 @@
-import requests
+import urllib.request
 import bz2
 import os
 
-def download_file(url, filename):
+def download_and_extract_model(url, filename):
+    """Download and extract a model file"""
     print(f"Downloading {filename}...")
-    response = requests.get(url, stream=True)
-    response.raise_for_status()
     
-    with open(filename + '.bz2', 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+    # Download the compressed file
+    compressed_path = f"{filename}.bz2"
+    urllib.request.urlretrieve(url, compressed_path)
     
+    # Extract the file
     print(f"Extracting {filename}...")
-    with bz2.open(filename + '.bz2', 'rb') as source, open(filename, 'wb') as dest:
-        dest.write(source.read())
+    with bz2.BZ2File(compressed_path) as fr, open(filename, "wb") as fw:
+        fw.write(fr.read())
     
-    os.remove(filename + '.bz2')
+    # Remove the compressed file
+    os.remove(compressed_path)
     print(f"Successfully downloaded and extracted {filename}")
 
-# URLs for the model files
-shape_predictor_url = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
-face_rec_model_url = "http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2"
+def main():
+    # URLs for the model files
+    models = {
+        "shape_predictor_68_face_landmarks.dat": 
+            "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2",
+        "dlib_face_recognition_resnet_model_v1.dat":
+            "http://dlib.net/files/dlib_face_recognition_resnet_model_v1.dat.bz2"
+    }
+    
+    for filename, url in models.items():
+        if not os.path.exists(filename):
+            try:
+                download_and_extract_model(url, filename)
+            except Exception as e:
+                print(f"Error downloading {filename}: {str(e)}")
+        else:
+            print(f"{filename} already exists")
 
-# Download and extract shape predictor
-download_file(shape_predictor_url, "shape_predictor_68_face_landmarks.dat")
-
-# Download and extract face recognition model
-download_file(face_rec_model_url, "dlib_face_recognition_resnet_model_v1.dat")
-
-print("All model files have been downloaded and extracted successfully!")
+if __name__ == "__main__":
+    main()
