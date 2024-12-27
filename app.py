@@ -7,9 +7,23 @@ import pandas as pd
 from PIL import Image
 import dlib
 import json
+import base64
+
+# Load custom CSS
+def load_css():
+    with open('style.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 # Set page config
-st.set_page_config(page_title="Face Recognition Attendance System", layout="wide")
+st.set_page_config(
+    page_title="AI Face Attendance 🎯",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Load custom CSS
+load_css()
 
 # Constants
 FACE_MATCH_THRESHOLD = 0.5
@@ -170,43 +184,77 @@ def init_camera():
     return None
 
 def main():
-    st.title("Face Recognition Attendance System")
+    # Custom title with gradient effect
+    st.markdown('<h1 class="title">AI Face Attendance System</h1>', unsafe_allow_html=True)
     
     if not MODELS_AVAILABLE:
-        st.error("Face recognition models not available. Please check installation.")
+        st.error("🚫 Face recognition models not available. Please check installation.")
         return
     
-    menu = ["Home", "Add New Face", "View Attendance"]
-    choice = st.sidebar.selectbox("Menu", menu)
+    # Sidebar with gradient background
+    st.sidebar.markdown("""
+        <div class="sidebar-header">
+            <h2>📋 Navigation Menu</h2>
+        </div>
+    """, unsafe_allow_html=True)
     
-    if choice == "Home":
-        st.subheader("Take Attendance")
+    menu = {
+        "Home": "🏠 Take Attendance",
+        "Add New Face": "👤 Add New Face",
+        "View Attendance": "📊 View Records"
+    }
+    choice = st.sidebar.selectbox("Select Option", list(menu.values()))
+    
+    # Add info box in sidebar
+    st.sidebar.markdown("""
+        <div class="sidebar-tips">
+            <h4>ℹ️ Quick Tips</h4>
+            <ul>
+                <li>💡 Ensure good lighting</li>
+                <li>📸 Face the camera directly</li>
+                <li>😊 Keep a neutral expression</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    if "🏠 Take Attendance" in choice:
+        st.markdown('<h2 class="page-title">📸 Real-time Attendance</h2>', unsafe_allow_html=True)
         
         known_faces, known_names = load_known_faces()
         
         if not known_faces:
-            st.warning("No known faces found. Please add faces through the 'Add New Face' menu.")
+            st.warning("👋 No known faces found. Please add faces through the 'Add New Face' menu.")
             return
         
         try:
             camera = init_camera()
             if camera is None:
-                st.error("No camera found. Please check your camera connection.")
+                st.error("🎥 No camera found. Please check your camera connection.")
                 return
                 
-            FRAME_WINDOW = st.image([])
+            # Create two columns for layout
+            col1, col2 = st.columns([3, 1])
             
-            # Add confidence threshold slider
-            confidence_threshold = st.slider(
-                "Recognition Confidence Threshold",
-                min_value=0.0,
-                max_value=1.0,
-                value=FACE_MATCH_THRESHOLD,
-                step=0.05,
-                help="Lower value means stricter matching"
-            )
+            with col1:
+                FRAME_WINDOW = st.image([])
             
-            stop_button = st.button("Stop Camera")
+            with col2:
+                st.markdown("""
+                    <div class="settings-card">
+                        <h3>⚙️ Settings</h3>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                confidence_threshold = st.slider(
+                    "🎯 Recognition Confidence",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=FACE_MATCH_THRESHOLD,
+                    step=0.05,
+                    help="Lower value means stricter matching"
+                )
+                
+                stop_button = st.button("🛑 Stop Camera", type="primary")
             
             while not stop_button:
                 ret, frame = camera.read()
@@ -253,13 +301,30 @@ def main():
             
             camera.release()
         except Exception as e:
-            st.error(f"Error accessing camera: {str(e)}")
+            st.error(f"🚫 Error accessing camera: {str(e)}")
         
-    elif choice == "Add New Face":
-        st.subheader("Add New Face")
+    elif "👤 Add New Face" in choice:
+        st.markdown("<h2 class='page-title'>👤 Add New Face</h2>", unsafe_allow_html=True)
         
-        name = st.text_input("Enter Name")
-        image_file = st.file_uploader("Upload Image", type=['jpg', 'jpeg', 'png'])
+        # Create two columns
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            name = st.text_input("👤 Enter Name")
+            
+            st.markdown("""
+                <div class='info-box'>
+                    <h4>📝 Instructions</h4>
+                    <ul>
+                        <li>Upload a clear face photo</li>
+                        <li>Ensure only one face is visible</li>
+                        <li>Good lighting is important</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            image_file = st.file_uploader("📸 Upload Image", type=['jpg', 'jpeg', 'png'])
         
         if image_file is not None and name:
             try:
@@ -294,22 +359,39 @@ def main():
             except Exception as e:
                 st.error(f"Error processing image: {str(e)}")
                 
-    elif choice == "View Attendance":
-        st.subheader("Attendance Records")
+    elif "📊 View Records" in choice:
+        st.markdown("<h2 class='page-title'>📊 Attendance Records</h2>", unsafe_allow_html=True)
         
         if st.session_state.attendance_df.empty:
-            st.write("No attendance records yet.")
+            st.info("📝 No attendance records yet.")
         else:
-            st.write(st.session_state.attendance_df)
+            # Create two columns
+            col1, col2 = st.columns([3, 1])
             
-            if st.button("Download Attendance CSV"):
-                csv = st.session_state.attendance_df.to_csv(index=False)
-                st.download_button(
-                    label="Download",
-                    data=csv,
-                    file_name=f'attendance_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
-                    mime='text/csv'
-                )
+            with col1:
+                st.dataframe(st.session_state.attendance_df, use_container_width=True)
+            
+            with col2:
+                st.markdown("""
+                    <div class='stats-card'>
+                        <h4>📊 Statistics</h4>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                total_records = len(st.session_state.attendance_df)
+                unique_people = len(st.session_state.attendance_df['Name'].unique())
+                
+                st.metric("Total Records", total_records)
+                st.metric("Unique People", unique_people)
+                
+                if st.button("📥 Download CSV"):
+                    csv = st.session_state.attendance_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download",
+                        data=csv,
+                        file_name=f'attendance_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv',
+                        mime='text/csv'
+                    )
 
 if __name__ == '__main__':
     main()
